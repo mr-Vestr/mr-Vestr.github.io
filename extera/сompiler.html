@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Компилятор файлов | File Compiler</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root {--bg: #050a14;--card-bg: rgba(255, 255, 255, 0.05);--border: rgba(255, 255, 255, 0.12);--accent: #0b84ff;--text: #ffffff;--text-dim: #a0a0a0;--modal-bg: rgba(12, 22, 45, 0.98);--glass-toast: rgba(255, 255, 255, 0.1);}
+[data-theme="light"] { --bg: #f5f7fa; --card-bg: rgba(255, 255, 255, 0.9); --border: rgba(0, 0, 0, 0.08); --accent: #007aff; --text: #1c1c1e; --text-dim: #6e6e73; --modal-bg: rgba(255, 255, 255, 1); --glass-toast: rgba(0, 0, 0, 0.05);}
+* { box-sizing: border-box; transition: background 0.3s, color 0.3s; }
+body { margin: 0; min-height: 100vh; font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; overflow: hidden;}
+.bg-decor { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.blob { position: absolute; width: 800px; height: 800px; background: radial-gradient(circle, var(--accent), transparent 75%); filter: blur(80px); border-radius: 50%; animation: floatMove 8s infinite ease-in-out; pointer-events: none; left: 50%; top: 50%; transform: translate(-50%, -50%);}
+@keyframes floatMove { 0% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; } 25% { transform: translate(-30%, -60%) scale(1.2); opacity: 0.6; } 50% { transform: translate(-70%, -50%) scale(1.3); opacity: 0.8; } 75% { transform: translate(-50%, -30%) scale(1.2); opacity: 0.6; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }}
+.card { position: relative; z-index: 10; width: 90%; max-width: 480px; background: var(--card-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid var(--border); border-radius: 28px; padding: 24px 32px 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.25);}
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;}
+.title-box h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+.description { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+.settings-bar { display: flex; gap: 8px; }
+.icon-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center;}
+.input-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.input-row input#fileName { flex: 1; }
+.input-row input#fileExt { width: 90px; }
+input { padding: 12px; background: rgba(128,128,128,0.08); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 14px;}
+input:focus { outline: 1px solid var(--accent); }
+.drop-zone { border: 2px dashed var(--border); border-radius: 18px; padding: 30px 10px; text-align: center; cursor: pointer; margin-bottom: 16px; background: rgba(255,255,255,0.01); transition: padding 0.3s ease;}
+.drop-zone.compact {padding: 20px 10px;}
+.drop-zone.active { border-color: var(--accent); background: rgba(11,132,255,0.1); }
+.file-list { max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.05); border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border);}
+.file-item { padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); font-size: 13px;}
+.remove-btn { background: none; border: none; color: #ff453a; cursor: pointer; display: flex;}
+.btn-main { width: 100%; padding: 16px; border-radius: 14px; border: none; background: var(--accent); color: white; font-weight: 700; cursor: pointer;}
+.btn-main:disabled { opacity: 0.4; cursor: not-allowed; }
+#toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: var(--modal-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); color: var(--text); padding: 12px 24px; border-radius: 99px; transition: top 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 10px; font-size: 14px;}
+#toast.show { top: 24px; }
+#resultModal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px);}
+.modal-content { position: relative; background: var(--modal-bg); padding: 40px; border-radius: 32px; width: 420px; text-align: center; border: 1px solid var(--border); animation: modalPopup 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);}
+@keyframes modalPopup { 0% { transform: scale(0.3); opacity: 0;} 50% { transform: scale(1.05);} 100% { transform: scale(1); opacity: 1;}}
+.close-modal { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-dim); cursor: pointer;}
+.success-icon { width: 80px; height: 80px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 10px 20px rgba(11, 132, 255, 0.3);}
+.hidden-inputs { display: none; }
+</style>
+</head>
+<body>
+<div class="bg-decor"><div class="blob"></div></div>
+<div class="card">
+  <div class="header">
+    <div class="title-box">
+      <h1 id="lang-title">Компилятор файлов</h1>
+      <div id="lang-desc" class="description">Быстро компилировать файлы онлайн</div>
+    </div>
+    <div class="settings-bar">
+      <button class="icon-btn" id="themeToggle"><i data-lucide="sun"></i></button>
+      <button class="icon-btn" id="langToggle">RU</button>
+    </div>
+  </div>
+  <div class="input-row">
+    <input id="fileName" placeholder="Название">
+    <input id="fileExt" placeholder=".crul">
+  </div>
+  <div class="drop-zone" id="dropZone">
+    <i data-lucide="upload" style="margin-bottom:8px"></i>
+    <p id="lang-drop" style="margin:4px 0; font-weight:600">Перетащите сюда папку или файл</p>
+    <div style="font-size: 11px; opacity: 0.6; display: flex; justify-content: center; gap: 10px; margin-top: 8px;">
+       <span id="btn-files" style="text-decoration: underline">Файлы</span>
+       <span id="btn-folder" style="text-decoration: underline">Папку</span>
+    </div>
+  </div>
+  <div id="fileList" class="file-list" style="display:none"></div>
+  <button id="compileBtn" class="btn-main" disabled>Компилировать</button>
+</div>
+<div id="resultModal">
+  <div class="modal-content">
+    <div class="success-icon"><i data-lucide="check" size="48"></i></div>
+    <h2 id="lang-ready" style="margin:0; font-size: 26px;">Готово!</h2>
+    <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 30px;">
+      <button class="btn-main" id="dlBtn">Скачать архив</button>
+      <button id="closeBtn" style="background:none; border:1px solid var(--border); color:var(--text); padding:14px; border-radius:14px; cursor:pointer; font-weight:600">Закрыть</button>
+    </div>
+  </div>
+</div>
+<div id="toast"><i data-lucide="info" size="18"></i> <span id="toastMsg"></span></div>
+<div class="hidden-inputs">
+  <input type="file" id="inpF" multiple>
+  <input type="file" id="inpD" webkitdirectory directory>
+</div>
+
+<script>
+lucide.createIcons();
+const state = {
+  theme: localStorage.getItem('theme') || 'dark',
+  lang: localStorage.getItem('lang') || 'ru',
+  name: localStorage.getItem('fileName') || 'my_project',
+  ext: localStorage.getItem('fileExt') || '.crul',
+  files: []
+};
+
+const i18n = {
+  ru: { title: "Компилятор файлов", desc: "Быстро компилировать файлы онлайн", drop: "Перетащите сюда папку или файл", files: "Файлы", folder: "Папку", ready: "Готово!", compile: "Компилировать", close: "Закрыть", error: "Ошибка", shareErr: "Обмен недоступен. Скачайте файл." },
+  en: { title: "File Compiler", desc: "Fast file compiler online", drop: "Drop folder or file here", files: "Files", folder: "Folder", ready: "Ready!", compile: "Compile", close: "Close", error: "Error", shareErr: "Sharing unavailable. Use download." }
+};
+
+const themeBtn = document.getElementById('themeToggle');
+const langBtn = document.getElementById('langToggle');
+const fileNameInp = document.getElementById('fileName');
+const fileExtInp = document.getElementById('fileExt');
+const dropZone = document.getElementById('dropZone');
+const fileList = document.getElementById('fileList');
+const compileBtn = document.getElementById('compileBtn');
+const toast = document.getElementById('toast');
+
+function updateUI() {
+  document.body.setAttribute('data-theme', state.theme);
+  themeBtn.innerHTML = `<i data-lucide="${state.theme === 'dark' ? 'sun' : 'moon'}"></i>`;
+  langBtn.textContent = state.lang.toUpperCase();
+  document.getElementById('lang-title').textContent = i18n[state.lang].title;
+  document.getElementById('lang-desc').textContent = i18n[state.lang].desc;
+  document.getElementById('lang-drop').textContent = i18n[state.lang].drop;
+  document.getElementById('btn-files').textContent = i18n[state.lang].files;
+  document.getElementById('btn-folder').textContent = i18n[state.lang].folder;
+  document.getElementById('lang-ready').textContent = i18n[state.lang].ready;
+  document.getElementById('closeBtn').textContent = i18n[state.lang].close;
+  compileBtn.textContent = i18n[state.lang].compile;
+  fileNameInp.value = state.name;
+  fileExtInp.value = state.ext;
+  lucide.createIcons();
+}
+
+fileNameInp.oninput = e => { state.name = e.target.value; localStorage.setItem('fileName', state.name); };
+fileExtInp.oninput = e => { state.ext = e.target.value; localStorage.setItem('fileExt', state.ext); };
+themeBtn.onclick = () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', state.theme); updateUI(); };
+langBtn.onclick = () => { state.lang = state.lang === 'ru' ? 'en' : 'ru'; localStorage.setItem('lang', state.lang); updateUI(); };
+dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('active'); };
+dropZone.ondragleave = () => dropZone.classList.remove('active');
+dropZone.ondrop = async e => {
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  const items = e.dataTransfer.items;
+  if (!items) return;
+  const supportsFileSystemAccessAPI = "getAsFileSystemHandle" in DataTransferItem.prototype;
+  const supportsWebkitGetAsEntry = "webkitGetAsEntry" in DataTransferItem.prototype;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.kind === "file") {
+      try {
+        if (supportsFileSystemAccessAPI) {
+          const handle = await item.getAsFileSystemHandle();
+          if (handle.kind === "directory") {
+            await processDirectoryHandle(handle, handle.name + "/");
+          } else {
+            const file = await handle.getFile();
+            addFile(file, file.name);
+          }
+        } else if (supportsWebkitGetAsEntry) {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            await scanEntry(entry, "");
+          }
+        } else {
+          const file = item.getAsFile();
+          if (file) addFile(file);
+        }
+      } catch (error) {
+        console.error("Error processing dropped item:", error);
+      }
+    }
+  }
+  renderFiles();
+};
+
+async function processDirectoryHandle(dirHandle, basePath) {
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind === "directory") {
+      await processDirectoryHandle(handle, basePath + name + "/");
+    } else {
+      const file = await handle.getFile();
+      addFile(file, basePath + name);
+    }
+  }
+}
+
+async function scanEntry(entry, path = "") {
+  if (entry.isFile) {
+    const file = await new Promise(res => entry.file(res));
+    addFile(file, path + entry.name);
+  } else if (entry.isDirectory) {
+    const reader = entry.createReader();
+    const readEntries = () => new Promise(res => reader.readEntries(res));
+    let entries = await readEntries();
+    while (entries.length > 0) {
+      for (const e of entries) {
+        await scanEntry(e, path + entry.name + "/");
+      }
+      entries = await readEntries();
+    }
+  }
+}
+
+function addFile(file, fullPath) {
+  const p = fullPath || file.webkitRelativePath || file.name;
+  Object.defineProperty(file, 'zipPath', { value: p, configurable: true });
+  state.files.push(file);
+}
+
+document.getElementById('btn-files').onclick = e => { e.stopPropagation(); document.getElementById('inpF').click(); };
+document.getElementById('btn-folder').onclick = e => { e.stopPropagation(); document.getElementById('inpD').click(); };
+dropZone.onclick = () => document.getElementById('inpF').click();
+document.getElementById('inpF').onchange = e => { Array.from(e.target.files).forEach(f => addFile(f)); renderFiles(); };
+document.getElementById('inpD').onchange = e => { Array.from(e.target.files).forEach(f => addFile(f)); renderFiles(); };
+
+function renderFiles() {
+  fileList.style.display = state.files.length ? 'block' : 'none';
+  if (state.files.length > 3) {
+    dropZone.classList.add('compact');
+  } else {
+    dropZone.classList.remove('compact');
+  }
+  fileList.innerHTML = state.files.map((f, i) => `
+    <div class="file-item">
+      <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:85%">${f.zipPath}</span>
+      <button class="remove-btn" onclick="removeF(${i})"><i data-lucide="trash-2" size="14"></i></button>
+    </div>
+  `).join('');
+  compileBtn.disabled = !state.files.length;
+  lucide.createIcons();
+}
+window.removeF = i => { state.files.splice(i, 1); renderFiles(); };
+
+let blob = null;
+compileBtn.onclick = async () => {
+  compileBtn.disabled = true;
+  const zip = new JSZip();
+  try {
+    for (const f of state.files) {
+      const data = await f.arrayBuffer();
+      zip.file(f.zipPath, data);
+    }
+    blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+    document.getElementById('resultModal').style.display = 'flex';
+  } catch (e) {
+    showToast(i18n[state.lang].error);
+  } finally {
+    compileBtn.disabled = false;
+  }
+};
+
+document.getElementById('dlBtn').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = state.name + state.ext; a.click();};
+const closeAll = () => { document.getElementById('resultModal').style.display = 'none'; state.files = []; renderFiles();};
+document.getElementById('closeBtn').onclick = closeAll;
+function showToast(m) { document.getElementById('toastMsg').textContent = m; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000);}
+updateUI();
+</script>
+</body>
+</html>

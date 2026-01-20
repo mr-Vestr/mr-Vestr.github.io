@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Vestr</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root {--bg: #050a14;--card-bg: rgba(255, 255, 255, 0.05);--border: rgba(255, 255, 255, 0.12);--accent: #0b84ff;--text: #ffffff;--text-dim: #a0a0a0;--modal-bg: rgba(12, 22, 45, 0.98);--glass-toast: rgba(255, 255, 255, 0.1);}
+[data-theme="light"] { --bg: #f5f7fa; --card-bg: rgba(255, 255, 255, 0.9); --border: rgba(0, 0, 0, 0.08); --accent: #007aff; --text: #1c1c1e; --text-dim: #6e6e73; --modal-bg: rgba(255, 255, 255, 1); --glass-toast: rgba(0, 0, 0, 0.05);}
+* { box-sizing: border-box; transition: background 0.3s, color 0.3s; }
+body { margin: 0; min-height: 100vh; font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; overflow: hidden;}
+.bg-decor { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.blob { position: absolute; width: 800px; height: 800px; background: radial-gradient(circle, var(--accent), transparent 75%); filter: blur(80px); border-radius: 50%; animation: floatMove 8s infinite ease-in-out; pointer-events: none; left: 50%; top: 50%; transform: translate(-50%, -50%);}
+@keyframes floatMove { 0% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; } 25% { transform: translate(-30%, -60%) scale(1.2); opacity: 0.6; } 50% { transform: translate(-70%, -50%) scale(1.3); opacity: 0.8; } 75% { transform: translate(-50%, -30%) scale(1.2); opacity: 0.6; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }}
+.card { position: relative; z-index: 10; width: 90%; max-width: 480px; background: var(--card-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid var(--border); border-radius: 28px; padding: 40px 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.25); text-align: center;}
+.header { margin-bottom: 40px;}
+.title-box h1 { margin: 0; font-size: 48px; line-height: 1.2; font-weight: 800; background: linear-gradient(135deg, var(--accent), #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;}
+.description { color: var(--text-dim); font-size: 16px; margin-top: 12px;}
+.settings-bar { display: flex; gap: 8px; position: absolute; top: 20px; right: 20px;}
+.icon-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 10px; cursor: pointer; display: flex; align-items: center;}
+.btn-group { display: flex; flex-direction: column; gap: 16px;}
+.btn-link { width: 100%; padding: 16px 24px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text); font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; text-decoration: none; transition: all 0.3s ease;}
+.btn-link:hover { background: var(--accent); color: white; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(11, 132, 255, 0.3);}
+</style>
+</head>
+<body>
+
+<div class="bg-decor"><div class="blob"></div></div>
+
+<div class="card">
+  <div class="settings-bar">
+    <button class="icon-btn" id="themeToggle"><i data-lucide="sun"></i></button>
+  </div>
+  
+  <div class="header">
+    <div class="title-box">
+      <h1>Vestr</h1>
+      <div class="description">Developer & Creator</div>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <a href="https://t.me/mr_Vestr" target="_blank" class="btn-link">
+      <i data-lucide="send" size="20"></i>
+      Telegram
+    </a>
+    <a href="https://t.me/I_am_Vestr" target="_blank" class="btn-link">
+      <i data-lucide="users" size="20"></i>
+      Channel
+    </a>
+  </div>
+</div>
+
+<script>
+lucide.createIcons();
+
+const state = {
+  theme: localStorage.getItem('theme') || 'dark'
+};
+
+const themeBtn = document.getElementById('themeToggle');
+
+function updateUI() {
+  document.body.setAttribute('data-theme', state.theme);
+  themeBtn.innerHTML = `<i data-lucide="${state.theme === 'dark' ? 'sun' : 'moon'}"></i>`;
+  lucide.createIcons();
+}
+
+themeBtn.onclick = () => { 
+  state.theme = state.theme === 'dark' ? 'light' : 'dark'; 
+  localStorage.setItem('theme', state.theme); 
+  updateUI(); 
+};
+
+updateUI();
+</script>
+</body>
+</html>
